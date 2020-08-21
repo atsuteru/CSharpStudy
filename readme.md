@@ -2,6 +2,62 @@
 
 ## ハイライト
 
+### 2020/8/21:HttpClientTest.cs
+
+        class GetDeltaBody
+        {
+            [JsonProperty(PropertyName = "versionNo")]
+            public int VersionNo { get; set; }
+
+            [JsonProperty(PropertyName = "deltaData")]
+            public string[] DeltaData { get; set; }
+        }
+
+        [TestMethod]
+        public void SimpleHttpClientTest()
+        {
+            const string URL = "http://storeserver:5003/api/DataSync/GetDelta?SellingLocationID=1001&RealMaintenanceVersionNo=0";
+
+            var client = new HttpClient();
+            var getTask = client.GetAsync(URL);
+            using (var result = getTask.Result)
+            {
+                Assert.AreEqual(HttpStatusCode.OK, result.StatusCode);
+                var readBodyTask = result.Content.ReadAsStringAsync();
+                var bodyData = readBodyTask.Result;
+
+                var body = JsonConvert.DeserializeObject<GetDeltaBody>(bodyData);
+                Assert.IsTrue(body.VersionNo > 0);
+                Assert.IsTrue(body.DeltaData.Length > 0);
+            }
+        }
+
+        // === 以下、Taskを理解するために ===
+        class Cake
+        {
+            public string Sponge { get; set; }
+        }
+
+        [TestMethod]
+        public void TaskTest2()
+        {
+            Task<Cake> BakeTheCakeAsync()
+            {
+                return Task.Run(() =>
+                {
+                    var cake = new Cake();
+                    Thread.Sleep(1000);
+                    cake.Sponge = "Biscuit dough";
+                    return cake;
+                });
+            }
+
+            var bakeTheCakeTask = BakeTheCakeAsync(); // Taskの処理が開始されるが、完了は待たない
+            var cake = bakeTheCakeTask.Result; // ResultはTaskの処理完了まで待ってくれるプロパティ
+            Assert.AreEqual("Biscuit dough", cake.Sponge);
+        }
+
+
 ### 2020/8/20:DictionaryTest.cs
 
         class Person
