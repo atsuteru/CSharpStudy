@@ -30,15 +30,16 @@ namespace CSharpStudy
 
             var client = new HttpClient();
             var getTask = client.GetAsync(URL);
-            var result = getTask.Result;
+            using (var result = getTask.Result)
+            {
+                Assert.AreEqual(HttpStatusCode.OK, result.StatusCode);
+                var readBodyTask = result.Content.ReadAsStringAsync();
+                var bodyData = readBodyTask.Result;
 
-            Assert.AreEqual(HttpStatusCode.OK, result.StatusCode);
-            var readBodyTask = result.Content.ReadAsStringAsync();
-            var bodyData = readBodyTask.Result;
-
-            var body = JsonConvert.DeserializeObject<GetDeltaBody>(bodyData);
-            Assert.IsTrue(body.VersionNo > 0);
-            Assert.IsTrue(body.DeltaData.Length > 0);
+                var body = JsonConvert.DeserializeObject<GetDeltaBody>(bodyData);
+                Assert.IsTrue(body.VersionNo > 0);
+                Assert.IsTrue(body.DeltaData.Length > 0);
+            }
         }
 
         class Cake
