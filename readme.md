@@ -2,6 +2,137 @@
 
 ## ハイライト
 
+### 2020/8/25:SQLTest.cs - Period 2: Query
+
+        [TestMethod]
+        public void Select()
+        {
+            using (var dbInstance = new EmployeeDbContext(
+                new DbContextOptionsBuilder()
+                    .UseSqlServer(@"Server=(LocalDb)\MSSQLLocalDB;Database=master;Trusted_Connection=True")
+                    .Options))
+            {
+                dbInstance.Database.OpenConnection();
+
+                // with Entity
+                var employeeList = dbInstance.Employees
+                    .Where(x => x.EmployeeAge > 25)
+                    .ToList();
+
+                // use Linq to SQL
+                var querable = 
+                    from emp in dbInstance.Employees
+                    where emp.EmployeeAge > 25
+                    select emp;
+                employeeList = querable.ToList();
+
+                // join example of Linq to SQL
+                var querable =
+                    from emp in dbInstance.Employees
+                    join div in dbInstance.Divisions
+                    on emp.DivisionCode equals div.DivisionCode 
+                    into divJoinCondition from divOuter in divJoinCondition.DefaultIfEmpty()
+                    where emp.EmployeeAge > 25
+                    select new Employee()
+                    {
+                        EmployeeId = emp.EmployeeId,
+                        EmployeeName = emp.EmployeeName,
+                        EmployeeAge = emp.EmployeeAge,
+                        DivisionCode = emp.DivisionCode,
+                        Division = divOuter
+                    };
+                employeeList = querable.ToList();
+            }
+        }
+
+        class EmployeeDbContext: DbContext
+        {
+            public DbSet<Employee> Employees { get; set; }
+            public DbSet<Division> Divisions { get; set; }
+            public EmployeeDbContext(DbContextOptions options) : base(options)
+            {
+            }
+            protected override void OnModelCreating(ModelBuilder modelBuilder)
+            {
+                base.OnModelCreating(modelBuilder);
+                modelBuilder.ApplyConfiguration(new Employee_Mapping());
+                modelBuilder.ApplyConfiguration(new Division_Mapping());
+            }
+        }
+
+### 2020/8/25:SQLTest.cs - Period 1: Insert
+
+        [TestMethod]
+        public void Insert()
+        {
+            var inputName = "kami's";
+            var inputAge = 39;
+            var inputDivision = 113;
+
+            // by SqlRaw
+            using (var dbInstance = new DbContext(
+                new DbContextOptionsBuilder()
+                    .UseSqlServer(@"Server=(LocalDb)\MSSQLLocalDB;Database=master;Trusted_Connection=True")
+                    .Options))
+            {
+                dbInstance.Database.OpenConnection();
+
+                // no-bind
+                dbInstance.Database.ExecuteSqlRaw(
+                    "INSERT INTO EMPLOYEE"
+                    + $" VALUES( '{Guid.NewGuid().ToString()}'"
+                    + $", '{inputName}'" // sql injection error!!
+                    + $", {inputAge}"
+                    + $", {inputDivision}"
+                    + ")"
+                    );
+
+                // use Bind
+                dbInstance.Database.ExecuteSqlRaw(
+                    "INSERT INTO EMPLOYEE"
+                    + $" VALUES( @Id"
+                    + $", @Name"
+                    + $", @Age"
+                    + $", @Division"
+                    + ")"
+                    , new SqlParameter("Id", Guid.NewGuid())
+                    , new SqlParameter("Name", inputName)
+                    , new SqlParameter("Age", inputAge)
+                    , new SqlParameter("Division", inputDivision)
+                    );
+            }
+
+            // by Entity (Framework Core)
+            using (var dbInstance = new EmployeeDbContext(
+                new DbContextOptionsBuilder()
+                    .UseSqlServer(@"Server=(LocalDb)\MSSQLLocalDB;Database=master;Trusted_Connection=True")
+                    .Options))
+            {
+                dbInstance.Database.OpenConnection();
+                dbInstance.Employees.Add(new Employee()
+                {
+                    EmployeeId = Guid.NewGuid(),
+                    EmployeeName = inputName,
+                    EmployeeAge = inputAge,
+                    DivisionCode = inputDivision
+                });
+                dbInstance.SaveChanges();
+            }
+        }
+
+        class EmployeeDbContext: DbContext
+        {
+            public DbSet<Employee> Employees { get; set; }
+            public EmployeeDbContext(DbContextOptions options) : base(options)
+            {
+            }
+            protected override void OnModelCreating(ModelBuilder modelBuilder)
+            {
+                base.OnModelCreating(modelBuilder);
+                modelBuilder.ApplyConfiguration(new Employee_Mapping());
+            }
+        }
+
 ### 2020/8/21:HttpClientTest.cs
 
         class GetDeltaBody
