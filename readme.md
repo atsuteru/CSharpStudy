@@ -2,6 +2,102 @@
 
 ## ハイライト
 
+### 2020/8/26:TaskTest.cs - Period 2: Exception
+
+        [TestMethod]
+        public void ExceptionTest()
+        {
+            Task ExceptionAsync()
+            {
+                return Task.Run(() =>
+                {
+                    Thread.Sleep(1000);
+                    if (true)
+                    {
+                        throw new Exception("get time error");
+                    }
+                    return DateTime.Now;
+                });
+            }
+
+            // ContinueWithする場合は、try-cacheは使えないので以下のようにする。
+            var task1 = ExceptionAsync();
+            var afterTask = task.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                {
+                    Debug.WriteLine($"task exception occured. Details: {t.Exception}");
+                }
+            });
+            afterTask.Wait();
+
+            // Waitする場合はそこにエラーが伝達される。
+            var task2 = ExceptionAsync();
+            try
+            {
+                task.Wait();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"task exception occured. Details: {t.Exception}");
+            }
+
+            // Resultを参照すると内部的にはWaitするので、そこにエラーが伝達される。
+            var task3 = ExceptionAsync();
+            try
+            {
+                var time = task.Result;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"task exception occured. Details: {t.Exception}");
+            }
+        }
+
+### 2020/8/26:TaskTest.cs - Period 1: ContinueWith
+
+        [TestMethod]
+        public void ContinueTest()
+        {
+            Thread.CurrentThread.Name = "Main";
+            _logs.Clear();
+
+            // 指定ミリ秒後にタイムスタンプを戻す非同期処理
+            Task<DateTime> SleepAsync(int millisecond)
+            {
+                return Task.Run(() =>
+                {
+                    Thread.CurrentThread.Name = "Async worker";
+                    _logs.Enqueue($"task running - {Thread.CurrentThread.Name}");
+                    Thread.Sleep(millisecond);
+                    return DateTime.Now;
+                });
+            }
+
+            _logs.Enqueue($"start - {Thread.CurrentThread.Name}");
+
+            // 1500ミリ秒後にタイムスタンプを戻す非同期処理をスタート
+            var task = SleepAsync(1500);
+            // 非同期処理が終わった後の処理を予約
+            Task afterTask = task.ContinueWith(t =>
+            {
+                Thread.CurrentThread.Name = "Continue worker";
+                _logs.Enqueue($"task completed - {Thread.CurrentThread.Name}");
+                _logs.Enqueue($"task completed result - {task.Result:yyyy/MM/dd HH:mm:ss.FFFFFFF}");
+            });
+            _logs.Enqueue($"task called - {Thread.CurrentThread.Name}");
+
+            // 非同期処理が終わった後の処理が完了するのを待つ
+            afterTask.Wait();
+            // 処理の実行順と、各処理の実行スレッドは下の通りになる。
+            _logs.ToList().ForEach(log => Debug.WriteLine(log));
+            //   start - Main
+            //   task called - Main
+            //   task running - Async worker
+            //   task completed - Continue worker
+            //   task completed result - yyyy/MM/dd HH:mm:ss.FFFFFFF
+        }
+
 ### 2020/8/25:SQLTest.cs - Period 2: Query
 
         [TestMethod]
